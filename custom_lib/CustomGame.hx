@@ -37,6 +37,25 @@ import arm.Level1_preTextLogic;
 class CustomGame{
 
 
+//////////////////////////////////////////////////////////////////////////////////////////////////
+	// This is an easy flag for allowing markers to move on to spawning AI-controlled archers or not. Debug feature.
+	public static var canSpawnThings:Bool = true;
+
+	// These are cheats that help the player.
+	public static var playerInvincible:Bool = false;
+	public static var superArrowDamage:Bool = true;
+	public static var playerRapidArrow:Bool = true;
+	public static var playerSpeedy:Bool = true;
+	public static var playerSuperJump:Bool = true;
+//////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
 	//how long arcade mode lasts. If the player survives this long, they win.
 	public static var arcadeModeDuration =  60*3;
 	//public static var arcadeModeDuration =  9;
@@ -44,18 +63,12 @@ class CustomGame{
 	//For other places like screen_end to also draw from if needed.
 	public static var gameEndTime:Float = 0;
 
+	// Multiple applied to player speed. May varry per game mode.
+	public static var playerSpeedFactor:Float = 1.0;
+
 	//default.
 	public static var currentGameMode:GameMode = GameMode.STORY;
 	
-	// This is an easy flag for allowing markers to move on to spawning AI-controlled archers or not. Debug feature.
-	public static var canSpawnThings:Bool = true;
-
-	// These are cheats that help the player.
-	public static var superArrowDamage:Bool = true;
-	public static var playerInvincible:Bool = true;
-	public static var playerRapidArrow:Bool = true;
-	public static var playerSpeedy:Bool = true;
-	public static var playerSuperJump:Bool = true;
 
 	// Number of these types of archers currently present in a level.
 	// Arcade mode doesn't want to spawn more if a limit is reached, and Story mode has a few missions that require 
@@ -90,6 +103,13 @@ class CustomGame{
 	];
 
 
+
+	public static function playSoundForPlayer(arg_soundPath:String, arg_soundLocation:Vec4, arg_baseVolume:Float = 1.0, arg_attenuation:Float = 1.0){
+		// Custom method for this game. Same as CustomLib.playSoundAtLocation, but sends the player's location as the listener automatically.
+		if(CustomGame.playerRef != null){
+			CustomLib.playSoundAtLocation(arg_soundPath, CustomGame.playerRef.transform.loc, arg_soundLocation, arg_baseVolume, arg_attenuation);
+		}
+	}//END OF playSoundForPlayer
 
 	//a squad can have been 3 and 5 archers, and are spawned close to each other. Same faction.
 	//Spawn at the specified coordinates (centered around that randomly a short distance)

@@ -449,6 +449,17 @@ class PlayerObject extends PersonObject {
 	}
 
 
+	public override function getMoveSpeed():Float{
+		
+		if(CustomGame.playerSpeedy){
+			// cheat: super speed for the player.
+			return super.getMoveSpeed() * 5;
+		}else{
+			// normal speed by default, can be adjusted by game modes.
+			return super.getMoveSpeed() * CustomGame.playerSpeedFactor;
+		}
+	}//END OF getMoveSpeed
+
 
 #end
 

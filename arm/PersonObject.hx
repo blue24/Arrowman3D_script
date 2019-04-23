@@ -4,8 +4,11 @@
 
 
 
+
 package arm;
 
+
+import iron.object.SpeakerObject;
 
 import iron.data.Armature;
 import kha.math.Random;
@@ -81,8 +84,6 @@ class PersonObject extends iron.Trait {
 #else
 
 	public var everAnimatedBefore:Bool = false;
-
-	public var vecMoveSpeed:Float = 100 * 0.01;
 
 	
 
@@ -542,14 +543,9 @@ class PersonObject extends iron.Trait {
 		if(body != null){
 
 			if (moveForward || moveBackward || moveLeft || moveRight) {
+				
+				dir.mult(getMoveSpeed());
 
-				if(this.myFaction == Faction.PLAYER && CustomGame.playerSpeedy){
-					// cheat: super speed for the player.
-					dir.mult(500 * 0.01);
-				}else{
-					// normal speed.
-					dir.mult(vecMoveSpeed);
-				}
 
 				body.activate();
 
@@ -652,7 +648,9 @@ class PersonObject extends iron.Trait {
 			//myEul.x += myPitch;
 			
 			
-
+			//make the noise.
+			CustomGame.playSoundForPlayer("woosh.ogg", object.transform.loc, 0.21, 0.14);
+			
 			
 			
 
@@ -660,7 +658,7 @@ class PersonObject extends iron.Trait {
 			
 			CustomLib.rotateQuatByAxisAngle(thewhat, object.transform.right().normalize(), myPitch);
 
-
+			
 
 			CustomLib.spawnObject_quat(CustomGame.currentSceneName + "_" + "person_ap_temp", new Vec4(vecFireOrigin.x, vecFireOrigin.y, vecFireOrigin.z), thewhat, new Vec4(0.12, 0.42, 0.12),
 				function(o:Object){
@@ -727,14 +725,38 @@ class PersonObject extends iron.Trait {
 	public function takeDamage(arg_damage:Float){
 		currentHealth -= arg_damage;
 
-		//...if only that worked.
-		//CustomLib.playSound("snd/hit/hit_1.ogg");
+		//CustomLib.playSound("hit_1.ogg", 0.1);
+
+		// Pick one of the hit sounds to play at random.
+		// And yes, they're picked from the "Bundled" folder (in this Blender project's folder)
+		// without the folder leading to them down Bundled.
+		// Example: if a file is at, Bundled/folder/otherfolder/file.ogg,
+		// you still tell the sound system to play it through "file.ogg".  Yea... zany.
+		var choice:Int = CustomLib.randomInRange_int(1, 5);
+		CustomGame.playSoundForPlayer("hit_" + choice + ".ogg", object.transform.loc, 0.21, 0.09);
+		
+		/*
+		var what:SpeakerObject = CustomLib.test();
+
+		what.transform.loc = this.object.transform.loc;
+		what.transform.buildMatrix();
+		*/
+
+		//what.play();
 
 		if(currentHealth <= 0){
 			killed();
 		}
 
 	}//END OF takeDamage
+
+
+
+
+	// How fast do I walk/run/whatever you call sliding against the ground by pressing keys?
+	public function getMoveSpeed():Float{
+		return 100 * 0.01;
+	}
 
 	
 

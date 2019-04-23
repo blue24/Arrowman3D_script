@@ -13,6 +13,8 @@ import armory.system.Event;
 
 import iron.system.Input;
 import iron.object.Object;
+
+import iron.object.SpeakerObject;
 import iron.object.CameraObject;
 import iron.object.BoneAnimation;
 import iron.object.Transform;
@@ -23,6 +25,8 @@ import armory.trait.internal.CameraController;
 import armory.trait.internal.CanvasScript;
 
 import kha.FastFloat;
+
+import kha.audio1.AudioChannel;
 
 
 import haxe.ds.Vector;
@@ -36,6 +40,10 @@ import iron.data.SceneFormat;
 import iron.data.MaterialData;
 import iron.object.MeshObject;
 import iron.object.CameraObject;
+
+
+import iron.data.SceneFormat.TSpeakerData;
+
 
 
 
@@ -252,12 +260,33 @@ class CustomLib{
 		arg_obj.visibleShadow = arg_visible;
 	}//END OF setEntityVisibility
 
-	//logic node.
-	public static function playSound(arg_soundPath:String){
+
+
+	//logic node, and a little more. Specify the volume.
+	public static function playSound(arg_soundPath:String, arg_volume:Float = 1.0){
 		iron.data.Data.getSound(arg_soundPath, function(sound:kha.Sound){
-			iron.system.Audio.play(sound, false, false);
+			var someAudioChannel:AudioChannel = iron.system.Audio.play(sound, false, false);
+			
+			// yes, really, we have to check for this.
+			if(someAudioChannel != null){
+				someAudioChannel.volume = arg_volume;
+			}
 		});
 	}//END OF playSound
+
+	// Play a sound at a location with a listener in mind. More distance reduces the volume.
+	// Based off of <armory>\armsdk\iron\Sources\iron\object\SpeakerObject.hx, part of the "update" method
+	public static function playSoundAtLocation(arg_soundPath:String, arg_listenerLocation:Vec4, arg_soundLocation:Vec4, arg_baseVolume:Float = 1.0, arg_attenuation:Float = 1.0){
+		var listenerDistance:FastFloat = Vec4.distance(arg_listenerLocation, arg_soundLocation);
+		// volume can be no more than 1 (max). Same for the amount to be removed from vol (so it can't end up negative)
+		// And this is still a modifier of the baseVolume parameter, which may be less than 1 to show a lower max is required.
+		// Stretches across the rest of the range too (lower at all distances).
+		var volInfluence = 1.0 - Math.min( (listenerDistance * arg_attenuation) / 100.0, 1.0);
+
+		trace("playSoundAtLocation: VolInfluence: " + volInfluence);
+		playSound(arg_soundPath, arg_baseVolume * volInfluence);
+
+	}//END OF playSoundAtLocation
 
 	public static function setObjectScale(arg_obj:Object, arg_vecScale:Vec4){
 		arg_obj.transform.scale.setFrom(arg_vecScale);
@@ -589,6 +618,41 @@ class CustomLib{
 	public static function randomInRange_int(arg_min:Int, arg_max:Int){
 		return Math.floor( (Math.random() * (arg_max - arg_min + 1)) + arg_min);
 	}
+	
+
+
+	/*
+	// This was an attempt to see how the SpeakerObject works.
+	// Looks like it can play a sound and be given a location (in-game) for playing the sound at a different
+	// volume depending on how far this object is from the listener and how much the sound volume drops off
+	// with distance (attenuation).
+	// Unfortunately, using an attenuation of anything other than 0 often causes it to still play at full volume
+	// for one frame which can be annoying. Sounds that should be nearly silent or not heard at all due to 
+	// distance would end up being played anyways for this blip.
+	// And using an attenuation of 0 causes the sent "volume" to have no effect. It looks to usually be set
+	// by a non-zero attenuation, so volume effectively never gets a chance to be changed.
+	// Setting the volume manually from a recently obtained channel for playing the sound (see "playSound" above)
+	// will work fine.
+	public static function test():SpeakerObject{
+		
+		//thing.play
+		//var otherThing:TSpeakerData = new TSpeakerData("");
+		var otherThing:TSpeakerData = {name:"what", sound:"hit_1.wav", muted:false, loop:false, stream:true, volume:0.001, pitch:1.0, attenuation:0, play_on_start:true};
+		//var theSpeaker:SpeakerObject = new SpeakerObject(otherThing);
+		
+		var theSpeakerObject:SpeakerObject = CustomLib.getActiveScene().addSpeakerObject(otherThing);
+		return theSpeakerObject;
+		//theSpeakerObject.play();
+	}
+	*/
+
+
+	
+
+
+
+	//public function addSpeakerObject(data:TSpeakerData, parent:Object = null):SpeakerObject {
+	
 
 			
 }//END OF class CustomLib

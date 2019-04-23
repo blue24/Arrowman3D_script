@@ -86,7 +86,7 @@ class CustomGameInit extends iron.Trait {
 		}
 
 		//move faster in arcade mode.
-		CustomGame.playerRefTrait.vecMoveSpeed = 140 * 0.01;
+		CustomGame.playerSpeedFactor = 1.4;
 		
 	}//END OF setupArcadeMode()
 
@@ -128,6 +128,8 @@ class CustomGameInit extends iron.Trait {
 		CustomGame.currentGameMode = GameMode.STORY;
 		CustomGame.gameEndTime = 0;  //and no timer by default.
 
+		CustomGame.playerSpeedFactor = 1.0;
+		
 
 		var arcadeModeTest:Game_ArcadeMode = object.getTrait(Game_ArcadeMode);
 		if(arcadeModeTest != null){

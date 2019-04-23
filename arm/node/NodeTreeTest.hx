@@ -100,7 +100,7 @@ package arm.node;
 		var _PlayAction_001 = new armory.logicnode.PlayActionNode(this);
 		_PlayAction_001.addInput(new armory.logicnode.NullNode(this), 0);
 		_PlayAction_001.addInput(new armory.logicnode.ObjectNode(this, "TitleText backup"), 0);
-		_PlayAction_001.addInput(new armory.logicnode.StringNode(this, "ShearAnim"), 0);
+		_PlayAction_001.addInput(new armory.logicnode.StringNode(this, "ShearAnim.001"), 0);
 		_PlayAction_001.addInput(new armory.logicnode.FloatNode(this, 0.20000000298023224), 0);
 		_PlayAction_001.addOutputs([new armory.logicnode.NullNode(this)]);
 		_PlayAction_001.addOutputs([new armory.logicnode.NullNode(this)]);
@@ -277,5 +277,9 @@ package arm.node;
 		_RotateObject_001.addInput(new armory.logicnode.ObjectNode(this, ""), 0);
 		_RotateObject_001.addInput(new armory.logicnode.VectorNode(this, 0.0, 0.0, 0.0), 0);
 		_RotateObject_001.addOutputs([new armory.logicnode.NullNode(this)]);
+		var _PlaySpeaker = new armory.logicnode.PlaySoundNode(this);
+		_PlaySpeaker.addInput(new armory.logicnode.NullNode(this), 0);
+		_PlaySpeaker.addInput(new armory.logicnode.ObjectNode(this, ""), 0);
+		_PlaySpeaker.addOutputs([new armory.logicnode.NullNode(this)]);
 	}
 }

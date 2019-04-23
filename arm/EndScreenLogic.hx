@@ -74,9 +74,30 @@ class EndScreenLogic extends iron.Trait {
 		if(wasVictory == true){
 			eleRef.text = "VICTORY";
 			eleRef.color = -16482560;  //green
+
+			// Give it a delay, has issus playing the moment a scene starts.
+			iron.system.Tween.timer(0.72,
+				function(){
+					// better not have moved away since starting this.
+					if(CustomLib.getActiveSceneName() == "scene_end"){
+						CustomLib.playSound("victory.ogg", 0.31);
+					}
+				}
+			);
+
 		}else{
 			eleRef.text = "GAME OVER";
 			eleRef.color = -7143424; //red
+
+			// Give it a delay, has issus playing the moment a scene starts.
+			iron.system.Tween.timer(0.72,
+				function(){
+					// better not have moved away since starting this.
+					if(CustomLib.getActiveSceneName() == "scene_end"){
+						CustomLib.playSound("lost.ogg", 0.29);
+					}
+				}
+			);
 		}
 		//trace("color?? " + eleRef.color);
 
