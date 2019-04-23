@@ -8,6 +8,7 @@ package arm;
 import custom_lib.CustomLib;
 import custom_lib.CustomGame;
 
+import iron.object.MeshObject;
 
 import iron.Scene;
 import iron.App;
@@ -51,12 +52,27 @@ class PersonAIObject extends PersonObject {
 	public var nextLongThink:Float = 0;
 	public var enemyObject:Object = null;
 
+	public var expirationTime:Float = 0;
+
 
 
 	public override function spawned(arg_faction:Faction){
 		super.spawned(arg_faction);
+
 		
 
+		personArmatureAnimation.play(CustomGame.currentSceneName + "_" + "aim", null, 0, 1, false);
+		
+		// this shapekey animation is not working.  It's hard to say how to do this then.
+		/*
+		var myBow:Object = CustomLib.getDirectChild(myArmatureObject, "person_bow_mesh");
+		var myBowMesh:MeshObject = cast(myBow, MeshObject);
+		myBowMesh.animation.play("BowStringMaxPull", null, 0, 1, false);
+		//myBowMesh.raw.
+		//myBow.raw.anim.tracks
+		*/
+		
+		
 	}//END OF spawned
 
 	// DONT call "super" versions of either of these, replace entirely!
@@ -75,7 +91,7 @@ class PersonAIObject extends PersonObject {
 
 	public override function removed(){
 		super.removed();
-		
+
 	}//END OF removed
 
 	public override function preUpdate(){
@@ -86,7 +102,18 @@ class PersonAIObject extends PersonObject {
 	public override function update(){
 		
 		if(!spawnCalled)return;
+
+
+
+
 		super.update();
+		
+		if(expirationTime != 0 && CustomLib.getCurrentTime() >= expirationTime){
+			// Time to expire. Remove me.
+			checkArcherCounts();
+			object.remove();
+			return;
+		}
 
 		//By default, unless I have an enemy in mind and am aiming at them.
 		this.fireArrowIntent = false;
@@ -102,9 +129,60 @@ class PersonAIObject extends PersonObject {
 			// instead later.
 			thatQuat.fromEuler(0, lookAng.y, lookAng.z);
 
-			_pitch = lookAng.x;
+			_pitch = lookAng.x + 90*(Math.PI/180);
 
 			object.transform.rot = thatQuat;
+
+
+
+
+			
+			/*
+			//return;
+			var myArmatureObject:Object = CustomLib.getDirectChild(object, "person_armature");
+			var myArmature:BoneAnimation = CustomLib.getArmatureAnimationOfObject(myArmatureObject);
+			//trace("??? " + object.uid + " " + myArmature.data.raw.skin.
+			
+
+
+
+
+			
+			
+			
+			//var person_cylinder_template:Object = THESCENE.getChild(CustomGame.currentSceneName + "_" + "person_cylinder_template");
+			////var person_cylinder_template:Object = Scene.active.root.getChild("person_cylinder_template");
+			//var person_armature:Object = person_cylinder_template.getChild("person_armature");
+			//var originalAnim:BoneAnimation = CustomLib.getArmatureAnimationOfObject(person_armature);
+			//var armRef:Armature = CustomLib.getArmatureOfObject(person_armature);
+			
+			
+			//var someBone:TObj = originalAnim.getBone("");
+			//someBone.transform.target
+			
+			//_pitch
+
+			var tempQuat:Quat = new Quat();
+			tempQuat.fromEuler(0, 0.04, 0 );
+
+			var theMat:Mat4 = Mat4.identity();
+			theMat.compose(new Vec4(0,0,0), tempQuat, new Vec4(1,1,1)); 
+			//theMat.setLookAt( theMat.getLoc(), 
+			//rotateQuatByAxisAngle
+			//matrix "compose" function
+			//theMat.toRotation
+
+			//getLookAngle
+
+			CustomLib.moveBone(myArmature, "spine_upper", theMat);
+			*/
+
+
+
+
+
+
+
 			body.syncTransform();
 
 			//We face the enemy instantly for now, go ahead and work.
@@ -151,11 +229,27 @@ class PersonAIObject extends PersonObject {
 							//this counts as a possible enemy.
 							//What's my distance to this one?
 							var otherLoc:Vec4 = thisChild.transform.loc;
-							var distTo:Float = new Vec4(otherLoc.x - myLoc.x, otherLoc.y - myLoc.y, otherLoc.z - myLoc.z).length();
+							//var distTo:Float = new Vec4(otherLoc.x - myLoc.x, otherLoc.y - myLoc.y, otherLoc.z - myLoc.z).length();
+							var distTo:Float = CustomLib.getDistance(myLoc, otherLoc);
 							//trace("DIST TO? " + distTo);
 							if(distTo < bestDistanceYet){
-								bestDistanceYet = distTo;
-								objClosestYet = thisChild;
+
+
+								// One more check. Is there an unobstructed line between me and the potential target?
+								var myEyeLocation:Vec4 = new Vec4(object.transform.loc.x, object.transform.loc.y, object.transform.loc.z + 21);
+								var targetCenter:Vec4 = new Vec4(thisChild.transform.loc.x, thisChild.transform.loc.y, thisChild.transform.loc.z + 12);
+
+								var rayCastResult:RigidBody = physics.rayCast(myEyeLocation, targetCenter );
+								//trace("rayCastResult? " + (rayCastResult!=null) );
+								if(rayCastResult != null){
+									if(rayCastResult.object.uid == thisChild.uid){
+										//successful hit. This path is clear.
+										bestDistanceYet = distTo;
+										objClosestYet = thisChild;
+									}
+								}
+
+
 							}
 
 						}//END OF factionHates check
@@ -182,6 +276,39 @@ class PersonAIObject extends PersonObject {
 		}//END OF nextLongThink
 
 	}//END OF update
+
+
+	public override function killed(){
+		
+		checkArcherCounts();
+
+		// Now remove me.
+		super.killed();
+
+	}//END OF killed
+
+
+	public function checkArcherCounts(){
+		// Reduce one of the ai-controlled archer counts.
+		switch(myFaction){
+			case ALLY:
+				CustomGame.currentAllyCount -= 1;
+			case ENEMY:
+				CustomGame.currentEnemyCount -= 1;
+			case PLAYER:
+				//???
+			default:
+				//???
+		}//END OF switch(myFaction)
+		trace("I HAPPENED. ENEMY LEFT: " + CustomGame.currentEnemyCount + " ALLY LEFT: " + CustomGame.currentAllyCount);
+	}//END OF checkArcherCounts
+
+
+	public function setExpirationTimer(arg_lifeTime){
+		expirationTime = CustomLib.getCurrentTime() + arg_lifeTime;
+	}
+
+
 
 
 	#end

@@ -180,7 +180,14 @@ class ArrowProjectileObject extends iron.Trait {
 							var playerDealt = (myFaction==Faction.PLAYER&&personObjectTrait.myFaction!=Faction.PLAYER);
 							if(playerDealt || CustomGame.factionHates(myFaction, personObjectTrait.myFaction)){
 								//do damage, delete self.
-								personObjectTrait.takeDamage( arrowDamage);
+								
+								if(playerDealt && CustomGame.superArrowDamage){
+									// cheat mode! Do supreme damage from player-fired arrows.
+									personObjectTrait.takeDamage( 9001);
+								}else{
+									// normal damage.
+									personObjectTrait.takeDamage( arrowDamage);
+								}
 
 								//last hit?
 								if(personObjectTrait.currentHealth <= 0 && playerDealt){

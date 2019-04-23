@@ -8,7 +8,7 @@ class Main {
         iron.object.LightObject.cascadeCount = 4;
         iron.object.LightObject.cascadeSplitFactor = 0.800000011920929;
         armory.system.Starter.main(
-            'scene_level_1',
+            'scene_splash_screen',
             0,
             false,
             true,

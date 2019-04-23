@@ -14,6 +14,11 @@ class InstructionsLogic extends iron.Trait {
 	public function new() {
 		super();
 		notifyOnInit(init);
+		notifyOnRemove(removed);
+	}
+
+	function removed(){
+		Event.remove("btnBackToSplash_clicked");
 	}
 
 	function init(){

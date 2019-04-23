@@ -74,6 +74,8 @@ class CustomObject extends iron.Trait {
 					
 
 //////////////////////////////////////////
+
+				/*
 				var daMesh:Object = armatureTest.getChild("person_mesh");
 				trace("person_armature null? " + (daMesh.getParentArmature("person_armature")!=null) );
 
@@ -86,6 +88,7 @@ class CustomObject extends iron.Trait {
 				for(acto in animationPlayer.armature.actions){
 					trace(acto.name);
 				}
+				*/
 				
 //////////////////////////////////////////
 				}
@@ -117,11 +120,11 @@ class CustomObject extends iron.Trait {
 				//NOTICE: does not automatically set the scale to that of the target object to start, have to hardcode that for now.
 				//ex: even if the template has a scale of (0.3,0.3,0.3), spawning it starts the clone with a scale of (1,1,1).
 				//    An option to start from the template's scale would be nice.
-				CustomLib.spawnObject_quat("person_cylinder_template", object.transform.loc, object.transform.rot, new Vec4(6, 6, 12.8),
+				CustomLib.spawnObject_quat(CustomGame.currentSceneName + "_" + "person_cylinder_template", object.transform.loc, object.transform.rot, new Vec4(6, 6, 12.8),
 					function(o:Object){
 						
-						
-
+						//that's another enemy.
+						CustomGame.currentEnemyCount += 1;
 						
 						//Create the relevant trait and customize if necessary.
 						var traitGen:PersonAIObject = new PersonAIObject();
@@ -184,9 +187,12 @@ class CustomObject extends iron.Trait {
 				
 				if(!custom_lib.CustomGame.canSpawnThings)return;
 
-				CustomLib.spawnObject_quat("person_cylinder_template", object.transform.loc, object.transform.rot, new Vec4(6, 6, 12.8),
+				CustomLib.spawnObject_quat(CustomGame.currentSceneName + "_" + "person_cylinder_template", object.transform.loc, object.transform.rot, new Vec4(6, 6, 12.8),
 					function(o:Object){
 						
+						//that's another ally.
+						CustomGame.currentAllyCount += 1;
+
 						//Create the relevant trait and customize if necessary.
 						var traitGen:PersonAIObject = new PersonAIObject();
 						o.addTrait(traitGen);
@@ -202,7 +208,9 @@ class CustomObject extends iron.Trait {
 					}, null, true
 				);
 
+				//trace("Ya? A1");
 				CustomLib.setObjectVisibility(object, false);
+				//trace("Ya? A2");
 				object.remove();
 				
 				//this results in deleting the currently attached entity, so stop the method.
@@ -211,7 +219,8 @@ class CustomObject extends iron.Trait {
 
 
 			if(object.getTrait(MARKER_spawnPlayer) != null){
-				CustomLib.spawnObject_quat("person_cylinder_template", object.transform.loc, object.transform.rot, new Vec4(6, 6, 12.8),
+				
+				CustomLib.spawnObject_quat(CustomGame.currentSceneName + "_" + "person_cylinder_template", object.transform.loc, object.transform.rot, new Vec4(6, 6, 12.8),
 					function(o:Object){
 						
 						//Create the relevant trait and customize if necessary.
@@ -231,8 +240,9 @@ class CustomObject extends iron.Trait {
 
 					}, null, true
 				);
-
+				
 				CustomLib.setObjectVisibility(object, false);
+				
 				object.remove();
 
 				//this results in deleting the currently attached entity, so stop the method.

@@ -22,6 +22,14 @@ import iron.object.Animation;
 import iron.object.ObjectAnimation;
 import iron.object.BoneAnimation;
 
+import zui.Canvas.TElement;
+import armory.trait.internal.CanvasScript;
+import armory.system.Event;
+
+
+
+
+
 
 // This trait must belong to the current scene and give the "arm.CustomObject" class to every object in the scene.
 // A few don't need it but it's not much.  Doesn't do any frame-per-frame logic on its own, only stores extra data
@@ -29,8 +37,15 @@ import iron.object.BoneAnimation;
 class CustomGameInit extends iron.Trait {
 
 
+	
+
 	var newObject:Object;
 	var matrices:Array<Mat4> = [];
+
+	public var thePlayerCanvas:CanvasScript;
+	public var txtTimer:TElement;
+	public var nextSquadSpawnTime:Float = 0;
+
 
 	public function new() {
 		super();
@@ -49,7 +64,40 @@ class CustomGameInit extends iron.Trait {
 	}//END OF new() function
 
 
+	function setupArcadeMode(){
+
+		CustomGame.currentGameMode = GameMode.ARCADE;
+
+		//Set the game length to 3 minutes.
+		CustomGame.gameEndTime = CustomLib.getCurrentTime() + CustomGame.arcadeModeDuration;
+		txtTimer.text = "Timer: " + CustomGame.buildTimerString_update();
+
+		nextSquadSpawnTime = CustomLib.getCurrentTime() + CustomLib.randomInRange_float(1.8, 4.8);
+
+
+		//start with a random number of squads to get into the action.
+		var startingSquads:Int = CustomLib.randomInRange_int(7, 9);
+
+		for(i in 0...startingSquads){
+			var squad_x:Float = CustomLib.randomInRange_float(-1080, 1080);
+			var squad_y:Float = CustomLib.randomInRange_float(-1080, 1080);
+			CustomGame.spawnRandomArcherSquad(squad_x, squad_y);
+			
+		}
+
+		//move faster in arcade mode.
+		CustomGame.playerRefTrait.vecMoveSpeed = 140 * 0.01;
+		
+	}//END OF setupArcadeMode()
+
+
+
 	function init(){
+
+		CustomGame.currentSceneName = CustomLib.getActiveSceneName();
+		
+		thePlayerCanvas = object.getTrait(CanvasScript);
+		txtTimer = thePlayerCanvas.getElement("txtTimer");
 		
 		// NOTE: A scene can get any member of a collection as a child, but not a colleciton itself.
 		//       Are collections only for organization in Blender and have nothing to do with
@@ -72,12 +120,43 @@ class CustomGameInit extends iron.Trait {
 
 
 
+		// Reset the ai-controlled archer counters.
+		CustomGame.currentAllyCount = 0;
+		CustomGame.currentEnemyCount = 0;
+
+		// until proven otherwise, this default remains.
+		CustomGame.currentGameMode = GameMode.STORY;
+		CustomGame.gameEndTime = 0;  //and no timer by default.
+
+
+		var arcadeModeTest:Game_ArcadeMode = object.getTrait(Game_ArcadeMode);
+		if(arcadeModeTest != null){
+			// This is now arcade mode. Randomly spawn in a radius from the center. Set a countdown timer for 3
+			// minutes, no goals.
+			setupArcadeMode();
+		}
+
+
+		var imgCrosshair:TElement = thePlayerCanvas.getElement("imgCrosshair");
+
+		var UseNightCrosshair_Test:UseNightCrosshair = object.getTrait(UseNightCrosshair);
+		if(UseNightCrosshair_Test != null){
+			//tell the player to use the thinner, less transparent crosshair.
+			imgCrosshair.asset = "crosshair_night.png";
+		}else{
+			//default.
+			imgCrosshair.asset = "crosshair.png";
+		}
+
+
+
+
 
 		
 		//Now wait a minute...
 		/*
 		
-		var person_cylinder_template:Object = object.getChild("person_cylinder_template");
+		var person_cylinder_template:Object = object.getChild(CustomGame.currentSceneName + "_" + "person_cylinder_template");
 		var person_armature:Object = person_cylinder_template.getChild("person_armature");
 		var anim:BoneAnimation = CustomLib.getArmatureAnimationOfObject(person_armature);
 
@@ -114,17 +193,17 @@ class CustomGameInit extends iron.Trait {
 		
 
 
-		/*
 		
-		var person_cylinder_template:Object = object.getChild("person_cylinder_template");
-		//var person_cylinder_template:Object = Scene.active.root.getChild("person_cylinder_template");
+		/*
+		var person_cylinder_template:Object = object.getChild(CustomGame.currentSceneName + "_" + "person_cylinder_template");
+		//var person_cylinder_template:Object = Scene.active.root.getChild(CustomGame.currentSceneName + "_" + "person_cylinder_template");
 		var person_armature:Object = person_cylinder_template.getChild("person_armature");
 		var originalAnim:BoneAnimation = CustomLib.getArmatureAnimationOfObject(person_armature);
 		//var armRef:Armature = CustomLib.getArmatureOfObject(person_armature);
 		
-		originalAnim.play("bow_backwaver", function done(){}, 0, 1, true);
-		
+		originalAnim.play("aim", function done(){}, 0, 1, true);
 		*/
+		
 		
 		//var spawnLoc:Vec4 = new Vec4(person_cylinder_template.transform.loc.x, person_cylinder_template.transform.loc.y + 8, person_cylinder_template.transform.loc.z);
 		
@@ -229,13 +308,56 @@ class CustomGameInit extends iron.Trait {
 
 	function update(){
 
+
+
+		switch(CustomGame.currentGameMode){
+			case GameMode.STORY:
+				//nothing special here.
+				
+			case GameMode.ARCADE:
+				//Continually spawn new archers from the sky every so often unless a limit (so many at one time can be present in the scene) is reached.
+
+				
+				
+
+				if(CustomLib.getCurrentTime() >= CustomGame.gameEndTime){
+					// Time's up, survived. End the game, won.
+					CustomGame.endGame(true, CustomGame.playerRefTrait.score);
+					return;
+				}else{
+					//And update the player's timer.
+					txtTimer.text = "Timer: " + CustomGame.buildTimerString_update();
+				}
+
+				var totalArchers:Int = CustomGame.currentAllyCount + CustomGame.currentEnemyCount;
+
+				// Don't create too many archers, could lag.
+				if(totalArchers < 70 && CustomLib.getCurrentTime() >= nextSquadSpawnTime){
+					nextSquadSpawnTime = CustomLib.getCurrentTime() + CustomLib.randomInRange_float(1.8, 4.8);
+					var squad_x:Float = CustomLib.randomInRange_float(-1080, 1080);
+					var squad_y:Float = CustomLib.randomInRange_float(-1080, 1080);
+					CustomGame.spawnRandomArcherSquad(squad_x, squad_y);
+				}
+
+			
+		}//END OF switch(gamemode)
+
+
+	
+
+
+
+
 		
-		/*
+		return;
+		///////////////////////////////////////////////////////////
 
-		//return;
 
-		var person_cylinder_template:Object = object.getChild("person_cylinder_template");
-		//var person_cylinder_template:Object = Scene.active.root.getChild("person_cylinder_template");
+
+
+
+		var person_cylinder_template:Object = object.getChild(CustomGame.currentSceneName + "_" + "person_cylinder_template");
+		//var person_cylinder_template:Object = Scene.active.root.getChild(CustomGame.currentSceneName + "_" + "person_cylinder_template");
 		var person_armature:Object = person_cylinder_template.getChild("person_armature");
 		var originalAnim:BoneAnimation = CustomLib.getArmatureAnimationOfObject(person_armature);
 		var armRef:Armature = CustomLib.getArmatureOfObject(person_armature);
@@ -243,7 +365,7 @@ class CustomGameInit extends iron.Trait {
 		//var someBone:TObj = originalAnim.getBone("");
 		//someBone.transform.target
 
-		trace("DEG: " + deg);
+		//trace("DEG: " + deg);
 		deg = 0.6;
 		//deg = 35;
 
@@ -261,8 +383,6 @@ class CustomGameInit extends iron.Trait {
 
 		CustomLib.moveBone(originalAnim, "spine_upper", theMat);
 		
-		*/
-
 
 		
 	}

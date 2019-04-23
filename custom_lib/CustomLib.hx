@@ -339,12 +339,14 @@ class CustomLib{
 
 
 
-	// logic node.
-	public static function getRandomFloat(arg_min:Float, arg_max:Float):Float{
-		return arg_min + (Math.random() * (arg_max - arg_min));
-	}//END OF getRandomFloat
 
-
+	public static function getCameraFOV(arg_camera:CameraObject):FastFloat{
+		return arg_camera.data.raw.fov;
+	}
+	public static function getCameraFOV_obj(arg_obj:Object):FastFloat{
+		var arg_camera:CameraObject = cast(arg_obj, CameraObject);
+		return arg_camera.data.raw.fov;
+	}
 
 	//logic node.
 	public static function setCameraFOV(arg_camera:CameraObject, arg_fov:Float){
@@ -372,6 +374,10 @@ class CustomLib{
 
 	public static function getActiveScene():Scene{
 		return iron.Scene.active;
+	}
+	// A scene, strangely, does not have a "name" but its "raw" field does. Whatever works.
+	public static function getActiveSceneName():String{
+		return iron.Scene.active.raw.name;
 	}
 
 	// Get the material with the given name and run the "arg_funDone" function when retrieved. also based off of a logic node.
@@ -458,10 +464,13 @@ class CustomLib{
 	//Overloaded version of above (with a sligtly different name, "_quat", since method overloading in Haxe is awkward).
 	//Use this if supplying a quaternion instead of a euler.
 	public static function spawnObject_quat(arg_strTemplateName:String, arg_vecLoc:Vec4, arg_qatAng:Quat, arg_vecScale:Vec4, arg_funDone:Object->Void, arg_objParent:Object=null, arg_blnIncludeChildren:Bool=true){
+		
 
+		//trace("spawnObject_quat: " + arg_strTemplateName);
 
 		iron.Scene.active.spawnObject(arg_strTemplateName, arg_objParent,
 		    function(o:Object) {
+				
 				o.transform.loc = arg_vecLoc;
 				
 				// is this ok?
@@ -557,11 +566,30 @@ class CustomLib{
 	}//END OF setTexturesFromMaterial_obj
 
 
+	public static function getCurrentTime():Float{
+		return iron.system.Time.time();
+	}//END OF getCurrentTime
+
+	//What is the distance between these two vectors? Just a shrotcut for the static Vec4 method already provided.
+	public static function getDistance(arg_vec1:Vec4, arg_vec2:Vec4):FastFloat{
+		return Vec4.distance(arg_vec1, arg_vec2);
+	}
 
 
+	// logic node.
+	public static function getRandomFloat(arg_min:Float, arg_max:Float):Float{
+		return arg_min + (Math.random() * (arg_max - arg_min));
+	}//END OF getRandomFloat
 
 
-			
+	public static function randomInRange_float(arg_min:Float, arg_max:Float){
+		return (Math.random() * (arg_max - arg_min)) + arg_min;
+	}
+
+	public static function randomInRange_int(arg_min:Int, arg_max:Int){
+		return Math.floor( (Math.random() * (arg_max - arg_min + 1)) + arg_min);
+	}
+
 			
 }//END OF class CustomLib
 

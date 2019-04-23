@@ -54,6 +54,13 @@ class PlayerObject extends PersonObject {
 
 
 
+	// Am I currently zoomed in with the right mouse button? Used to see if the state (zoomed or not) needs changing.
+	// That just edits the camera's FOV.
+	public var zoomedIn:Bool = false;
+	public var targetCameraFOV:Float = 0;
+
+
+
 	//CONTROLS. Don't be afraid to point that out in a comment dude!  Those letters ain't gonna bite ya!
 	#if arm_azerty
 	static inline var keyUp = 'z';
@@ -70,6 +77,10 @@ class PlayerObject extends PersonObject {
 	static inline var keyStrafeUp = 'e';
 	static inline var keyStrafeDown = 'q';
 	#end
+
+
+	public static inline var cameraFOV_normal = 0.8;
+	public static inline var cameraFOV_zoomed = 0.4;
 
 	// IN DEGREES!
 	public static inline var cameraPitchMaxUp = 70;
@@ -90,7 +101,7 @@ class PlayerObject extends PersonObject {
 	public var cameraLocOffset:Vec4 = new Vec4(0, 0.97, 24.66/2);
 	
 	//Original value: 2.0
-	public static inline var rotationSpeed:Float = 0.3; 
+	public static inline var mouseSensitivity:Float = 0.258; 
 
 
 	public var camera:CameraObject = null;
@@ -103,12 +114,30 @@ class PlayerObject extends PersonObject {
 
 		super.spawned(arg_faction);
 
+		// make these invisible for safety, not showing in the first-person view.
+		if(!topDownView){
+			trace("HERE I GO B1");
+			CustomLib.setObjectVisibility(bowObject, false);
+			CustomLib.setObjectVisibility(arrowObject, false);
+			trace("HERE I GO B2");
+		}
+
+
 		canvas = CustomLib.getActiveScene().getTrait(CanvasScript);
 		ui_txtScore = canvas.getElement("txtScore");
 		ui_txtHealth = canvas.getElement("txtHealth");
 
-		//Bring the world camera to me.
-		var camera_container_ref:Object = iron.Scene.active.getChild("camera_player_container");
+		// Bring the world camera to me.
+		//var camera_container_ref:Object = iron.Scene.active.getChild("camera_player_container");
+		// do it this way instead:
+		// ...or that won't even work, fine. Just do this.
+		//var camera_container_ref:Object = CustomLib.getDirectChild(iron.Scene.active.root, "camera_player_container");
+		var camera_container_ref:Object = iron.Scene.active.getChild(CustomGame.currentSceneName + "_" + "camera_player_container");
+		
+		//for(thechi in iron.Scene.active.root.children){
+		//	trace("!!! WHAT IS THIS " + thechi.name);
+		//}
+
 		if(camera_container_ref == null){
 			trace("!!! CRITICAL ERROR. Player camera container not found, camera not attached!");
 		}else{
@@ -146,12 +175,13 @@ class PlayerObject extends PersonObject {
 			//While we're at it, establish this then.
 			//Interestingly enough, "getChild" does a recursive search too.  
 			//Even if the camera is a child object's child object, it will catch it.
-			camera = cast(camera_container_ref.getChild("camera_player"), CameraObject);
-			trace("camera null? " + (camera!=null));
+			var cameraTemp:Object = CustomLib.getDirectChild(camera_container_ref, "camera_player");
+			camera = cast( cameraTemp, CameraObject);
+			trace("camera null? " + (cameraTemp!=null) + " " + (camera!=null));
 
 			//And start looking through the camera.
 			if(camera!=null){
-				CustomLib.setCameraFOV(camera, 0.8);
+				CustomLib.setCameraFOV(camera, cameraFOV_normal);
 
 				var mouse = Input.getMouse();
 				//start with the mouse locked.
@@ -168,7 +198,12 @@ class PlayerObject extends PersonObject {
 			//Leave the active camera the way it is in the scene, may want to look at the player from 3rd person with another
 			//camera set to active instead.
 			//CustomLib.setActiveCamera(camera);
+
 		}
+
+		zoomedIn = false;
+		targetCameraFOV = cameraFOV_normal;
+
 	}//END OF spawned
 
 
@@ -209,8 +244,8 @@ class PlayerObject extends PersonObject {
 			var headUp:Vec4 = camera.transform.up();
 			var headRight:Vec4 = camera.transform.right();
 			
-			var rotateAmount_x:FastFloat = -mouse.movementX / 250 * rotationSpeed;
-			var rotateAmount_y:FastFloat = -mouse.movementY / 250 * rotationSpeed;
+			var rotateAmount_x:FastFloat = -mouse.movementX / 250 * mouseSensitivity;
+			var rotateAmount_y:FastFloat = -mouse.movementY / 250 * mouseSensitivity;
 
 			//!!! This is the entire object rotating left/right, or floor-wise from a top-down view.
 			object.transform.rotate(zVec, rotateAmount_x);
@@ -219,6 +254,7 @@ class PlayerObject extends PersonObject {
 			var newCameraPitch = cameraEuler.x + rotateAmount_y;
 
 			if(!topDownView){
+
 				//pitch adjustments not allowed in topdown view.
 				if(newCameraPitch > cameraPitchMaxUp_Absolute){
 					//rotateAmount_y = (cameraPitchMaxUp_Absolute - cameraEuler.x);
@@ -242,6 +278,64 @@ class PlayerObject extends PersonObject {
 			object.transform.buildMatrix();
 
 		}//END OF mouse.locked and mouse.down checks
+
+
+		if(!topDownView){
+			
+			var mouseRightDown:Bool = mouse.down("right");
+			// holding down the right mouse button zooms in.
+
+			/*
+			// old instant version.
+			if(mouseRightDown && !zoomedIn){
+				zoomedIn = true;
+				CustomLib.setCameraFOV(camera, cameraFOV_zoomed);
+			}else if(!mouseRightDown && zoomedIn){
+				//not holding down right but zoomed in? Stop being zoomed in.
+				zoomedIn = false;
+				CustomLib.setCameraFOV(camera, cameraFOV_normal);
+			}//END OF right mouse / zoom checks.
+			*/
+
+			if(mouseRightDown){
+				if(!zoomedIn){
+					zoomedIn = true;
+					targetCameraFOV = cameraFOV_zoomed;
+				}
+				//go towards the target.
+
+			}else if(!mouseRightDown && zoomedIn){
+				//not holding down right but zoomed in? Stop being zoomed in.
+
+				
+				if(zoomedIn){
+					zoomedIn = false;
+					targetCameraFOV = cameraFOV_normal;
+				}
+				//go towards the target.
+
+			}//END OF right mouse / zoom checks.
+
+			var currentFOV:Float = CustomLib.getCameraFOV(camera);
+			var deltaFOV = targetCameraFOV - currentFOV;
+
+			//trace("Fov: " + currentFOV + " deltaFOV: " + deltaFOV + " Target: " + targetCameraFOV); 
+
+			////If we're close enough, snap to the exact target.
+			if(Math.abs(deltaFOV) < 0.0008){
+				//If we're closer than this don't even bother doing anything. Crazy decimals.
+				if(Math.abs(deltaFOV) > 0.0001){
+					CustomLib.setCameraFOV(camera, targetCameraFOV);	
+				}
+			}else{
+				// Typical approach: slow down as we approach the target.
+				var newFOV = currentFOV + deltaFOV * 0.07;
+				CustomLib.setCameraFOV(camera, newFOV);
+			}
+			
+		}//END OF not topdown view check
+
+
 
 
 	}//END OF preUpdate
@@ -317,19 +411,43 @@ class PlayerObject extends PersonObject {
 		return 100;
 	}
 	public override function getReloadTime():Float{
-		return 0.17;
+		if(!CustomGame.playerRapidArrow){
+			// normal.
+			return 0.17;
+		}else{
+			// cheat. crazy fast!
+			return 0;
+		}
 	}
 	public override function getAutoHealAmount():Float{
 		return 4;
 	}
 
+	public override function killed(){
+		// change scenes. goodbye.
+		CustomGame.endGame(false, this.score);
+
+		// no need for parent behavior.
+		//super.killed();
+
+	}//END OF killed
+
+
 	public override function takeDamage(arg_damage:Float){
-		currentHealth -= arg_damage;
-		if(currentHealth <= 0){
-			//change scenes. goodbye.
-			CustomGame.endGame(false, this.score);
-		}
+
+		// This cheat makes the player invulnerable. No damage.
+		if(CustomGame.playerInvincible)return;
+
+		// otherwise same default behavior. What "Killed" does is a little different though.
+		super.takeDamage(arg_damage);
+
 	}//END OF takeDamage
+
+	public function goalVisibleNotice(){
+		var txtNotice:TElement = canvas.getElement("txtNotice");
+		txtNotice.text = "Goal available!";
+	}
+
 
 
 #end

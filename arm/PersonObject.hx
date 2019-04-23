@@ -82,15 +82,13 @@ class PersonObject extends iron.Trait {
 
 	public var everAnimatedBefore:Bool = false;
 
-	//public var vecMoveSpeed:Float = 100 * 0.01;
+	public var vecMoveSpeed:Float = 100 * 0.01;
 
-	//SOOPAH SPED
-	public var vecMoveSpeed:Float = 1200 * 0.01;
+	
 
+	public var vecJumpForceMag:Float = 32;
 
-	public var vecJumpForceMag:Float = 28;
-
-	public static inline var personGravity:Float = -44;
+	public static inline var personGravity:Float = -56;
 
 //FROM CameraController.hx
 
@@ -107,7 +105,12 @@ class PersonObject extends iron.Trait {
 	// Stored separately as to not affect orientation.
 	public var _pitch:Float = 90*(Math.PI/180);
 	
+	// The bow & arrow objects attached to the archer's hands. These are not collidable or part of any logic.
+	public var bowObject:Object;
 	public var arrowObject:Object;
+	public var personArmatureObject:Object;  //raw object itself; don't trust its ".animation".
+	public var personArmatureAnimation:BoneAnimation;  //the real way to play animations on the armature.
+
 
 	// Configure to allow multi-jumping since reaching the ground. Never changes ingame.
 	public var maxJumpsAllowed:Int = 1;
@@ -188,14 +191,26 @@ class PersonObject extends iron.Trait {
 
 		
 		
+		trace("HERE I GO A1");
 		// The top-most object, the collider, has a cylinder only for showing the size of the collider.
 		// Don't render it.
 		CustomLib.setObjectVisibility(object, false);
+		trace("HERE I GO A2");
+
+
+		
+		personArmatureObject = CustomLib.getDirectChild(object, "person_armature");
+		personArmatureAnimation = CustomLib.getArmatureAnimationOfObject(personArmatureObject);
+
+		bowObject = CustomLib.getDirectChild(personArmatureObject, "person_bow_mesh");
+		arrowObject = CustomLib.getDirectChild(personArmatureObject, "person_arrow_mesh");
+
+
 
 
 		CustomLib.getMaterial(myMeshMat,
 			function(mat:MaterialData){
-				var myMeshObject:Object = object.getChild("person_mesh");
+				var myMeshObject:Object = CustomLib.getDirectChild(personArmatureObject, "person_mesh");
 				if(myMeshObject!=null){
 					var tempMeshRef:MeshObject = cast(myMeshObject, MeshObject);
 
@@ -209,21 +224,19 @@ class PersonObject extends iron.Trait {
 		);
 
 		
-
-		//create an object clone of "person_arrow_mesh"
-		
-		/*
-		arrowObject = object.getChild("arrow_mesh");
 		CustomLib.getMaterial(myArrowMat,
 			function(mat:MaterialData){
 				if(arrowObject!=null){
-					CustomLib.setTexturesFromMateriale_obj(arrowObject, mat);
+					trace("WOO HOOO");
+					CustomLib.setTexturesFromMaterial_obj(arrowObject, mat);
 					
 				}
 			}
 		);
-		CustomLib.setObjectVisibility(arrowObject, false);
-		*/
+
+		//CustomLib.setObjectVisibility(arrowObject, false);
+		
+		
 		
 
 		//The rest of init script has been moved to "spawn".
@@ -397,30 +410,29 @@ class PersonObject extends iron.Trait {
 				var physics = armory.trait.physics.PhysicsWorld.active;
 				
 				
-				if(object.transform.loc != null){
-					var rayCastResult = physics.rayCast(object.transform.loc, new Vec4(myLoc.x, myLoc.y, myLoc.z - (12 + 2.1) )  );
-					//trace("rayCastResult? " + (rayCastResult!=null) );
-					if(rayCastResult != null){
-						var tempRef:CustomObject = rayCastResult.object.getTrait(CustomObject);
-						if(tempRef != null && tempRef.isGround() ){
+				var rayCastResult:RigidBody = physics.rayCast(object.transform.loc, new Vec4(myLoc.x, myLoc.y, myLoc.z - (12 + 2.1) )  );
+				//trace("rayCastResult? " + (rayCastResult!=null) );
+				if(rayCastResult != null){
+					var tempRef:CustomObject = rayCastResult.object.getTrait(CustomObject);
+					if(tempRef != null && tempRef.isGround() ){
 
-							if(groundFloatTime == 0){
-								var pointHit:Vec4 = physics.hitPointWorld;
-								body.disableGravity();
-								object.transform.loc = new Vec4(myLoc.x, myLoc.y, pointHit.z + 12 + 1.5);
-								object.transform.buildMatrix();
-								body.syncTransform();
-								if (body != null) body.syncTransform();
-								
-							}
-							jumpsAllowed = maxJumpsAllowed;
-
-							groundFloatTime = iron.system.Time.time() + 0.2;
+						if(groundFloatTime == 0){
+							var pointHit:Vec4 = physics.hitPointWorld;
+							body.disableGravity();
+							object.transform.loc = new Vec4(myLoc.x, myLoc.y, pointHit.z + 12 + 1.5);
+							object.transform.buildMatrix();
+							body.syncTransform();
+							if (body != null) body.syncTransform();
 							
-							//body.restitution
 						}
+						jumpsAllowed = maxJumpsAllowed;
+
+						groundFloatTime = iron.system.Time.time() + 0.2;
+						
+						//body.restitution
 					}
 				}
+				
 				
 			}//END OF jumpResetBlockDelay check
 
@@ -474,7 +486,16 @@ class PersonObject extends iron.Trait {
 				//it slows down the fall a little, not very exciting.
 				body.setLinearVelocity(myVel.x, myVel.y, 0);
 
-				body.applyImpulse(new Vec4(0, 0, vecJumpForceMag));
+
+				if(this.myFaction == Faction.PLAYER && CustomGame.playerSuperJump){
+					// cheat: player super jump
+					body.applyImpulse(new Vec4(0, 0, vecJumpForceMag * 6));
+				}else{
+					// normal jump.
+					body.applyImpulse(new Vec4(0, 0, vecJumpForceMag));
+				}
+
+
 				jumpsAllowed -= 1;
 
 				// Can't reset the jump number again from collisions with the ground until
@@ -520,8 +541,15 @@ class PersonObject extends iron.Trait {
 
 		if(body != null){
 
-			if (moveForward || moveBackward || moveLeft || moveRight) {			
-				dir.mult(vecMoveSpeed);
+			if (moveForward || moveBackward || moveLeft || moveRight) {
+
+				if(this.myFaction == Faction.PLAYER && CustomGame.playerSpeedy){
+					// cheat: super speed for the player.
+					dir.mult(500 * 0.01);
+				}else{
+					// normal speed.
+					dir.mult(vecMoveSpeed);
+				}
 
 				body.activate();
 
@@ -602,6 +630,7 @@ class PersonObject extends iron.Trait {
 		}
 
 		if(fireArrowIntent && reloadDelay <= iron.system.Time.time()){
+			
 			reloadDelay = iron.system.Time.time() + getReloadTime();
 
 			var vecFireOrigin:Vec4 = getArrowFirePoint();
@@ -633,8 +662,9 @@ class PersonObject extends iron.Trait {
 
 
 
-			CustomLib.spawnObject_quat("person_ap_temp", new Vec4(vecFireOrigin.x, vecFireOrigin.y, vecFireOrigin.z), thewhat, new Vec4(0.12, 0.42, 0.12),
+			CustomLib.spawnObject_quat(CustomGame.currentSceneName + "_" + "person_ap_temp", new Vec4(vecFireOrigin.x, vecFireOrigin.y, vecFireOrigin.z), thewhat, new Vec4(0.12, 0.42, 0.12),
 				function(o:Object){
+					
 					var traitGen:ArrowProjectileObject = new ArrowProjectileObject();
 					o.addTrait(traitGen);
 					traitGen.spawned(myFaction);
@@ -645,6 +675,16 @@ class PersonObject extends iron.Trait {
 			
 		}
 	}//END OF update
+
+
+	// Note that this method doesn't run on scene cleanup when changing scenes, unlike Removed above.
+	// This is only for running out of health as a geneal event.
+	public function killed(){
+
+		//default behavior: delete this archer.  The player should move to a "Game Over" end screen instead.
+		object.remove();
+
+	}//END OF killed
 
 
 	//Where should an arrow I'm firing spawn?
@@ -686,13 +726,17 @@ class PersonObject extends iron.Trait {
 
 	public function takeDamage(arg_damage:Float){
 		currentHealth -= arg_damage;
-		if(currentHealth <= 0){
-			//delete this archer.  The player should move to a "Game Over" end screen instead.
-			object.remove();
-		}
+
 		//...if only that worked.
 		//CustomLib.playSound("snd/hit/hit_1.ogg");
-	}
+
+		if(currentHealth <= 0){
+			killed();
+		}
+
+	}//END OF takeDamage
+
+	
 
 #end
 

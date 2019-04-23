@@ -14,23 +14,37 @@ class SplashScreenLogic extends iron.Trait {
 		super();
 
 		notifyOnInit(init);
+		notifyOnRemove(removed);
+	}
 
+	function removed(){
+		Event.remove("btnStoryMode_clicked");
+		Event.remove("btnArcadeMode_clicked");
+		Event.remove("btnInstructions_clicked");
+		Event.remove("btnQuit_clicked");
 	}
 
 	function init(){
 		canvas = object.getTrait(CanvasScript);
 		
-		Event.add("btnPlay_clicked", btnPlay_clicked);
+		Event.add("btnStoryMode_clicked", btnStoryMode_clicked);
+		Event.add("btnArcadeMode_clicked", btnArcadeMode_clicked);
+
 		Event.add("btnInstructions_clicked", btnInstructions_clicked);
 		Event.add("btnQuit_clicked", btnQuit_clicked);
 
 	}//END OF init
 
 
-	function btnPlay_clicked(){
-		iron.Scene.setActive("scene_level_1", function(o:iron.object.Object) {
+	function btnStoryMode_clicked(){
+		iron.Scene.setActive("scene_level_select", function(o:iron.object.Object) {
 		});
 	}
+	function btnArcadeMode_clicked(){
+		iron.Scene.setActive("scene_arcade", function(o:iron.object.Object) {
+		});
+	}
+
 	function btnInstructions_clicked(){
 		iron.Scene.setActive("scene_instructions", function(o:iron.object.Object) {
 		});
